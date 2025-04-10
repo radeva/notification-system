@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"notification-system/pkg/config"
+	"notification-system/pkg/model"
 	"notification-system/pkg/providers"
 	"notification-system/pkg/queue"
 	"notification-system/pkg/storage"
@@ -27,16 +28,18 @@ func main() {
 	}
 	defer q.Close()
 
-	// Initialize providers
+	// Initialize notification strategy context
+	notifier := providers.NewNotificationStrategyContext()
+	
+	// Register providers
 	smsProvider := providers.NewTwilioSMSProvider(cfg.Twilio)
-	// TODO: Initialize email and Slack providers when implemented
+	notifier.RegisterStrategy(model.ChannelSMS, smsProvider)
+	// TODO: Register email and Slack providers when implemented
 	
 	w := worker.NewWorker(
 		db,
 		q,
-		smsProvider,
-		nil, // Email provider not implemented yet
-		nil, // Slack provider not implemented yet
+		notifier,
 		cfg.Retry,
 		cfg.RabbitMQ.DLQPrefix,
 	)

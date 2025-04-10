@@ -16,9 +16,7 @@ import (
 type Worker struct {
 	db          *storage.Database
 	queue       *queue.QueueClient
-	smsProvider providers.SMSProvider
-	emailProvider providers.EmailProvider
-	slackProvider providers.SlackProvider
+	notifier    *providers.NotificationStrategyContext
 	config      config.RetryConfig
 	dlqPrefix   string
 }
@@ -26,20 +24,16 @@ type Worker struct {
 func NewWorker(
 	db *storage.Database,
 	q *queue.QueueClient,
-	smsProvider providers.SMSProvider,
-	emailProvider providers.EmailProvider,
-	slackProvider providers.SlackProvider,
+	notifier *providers.NotificationStrategyContext,
 	config config.RetryConfig,
 	dlqPrefix string,
 ) *Worker {
 	return &Worker{
-		db:           db,
-		queue:        q,
-		smsProvider:  smsProvider,
-		emailProvider: emailProvider,
-		slackProvider: slackProvider,
-		config:       config,
-		dlqPrefix:    dlqPrefix,
+		db:         db,
+		queue:      q,
+		notifier:   notifier,
+		config:     config,
+		dlqPrefix:  dlqPrefix,
 	}
 }
 
@@ -120,23 +114,5 @@ func (w *Worker) processChannel(channel model.NotificationChannel) {
 }
 
 func (w *Worker) process(ctx context.Context, notification model.Notification) error {
-	switch notification.Channel {
-	case model.ChannelEmail:
-		if w.emailProvider == nil {
-			return fmt.Errorf("email provider not configured")
-		}
-		return w.emailProvider.Send(ctx, notification)
-	case model.ChannelSMS:
-		if w.smsProvider == nil {
-			return fmt.Errorf("SMS provider not configured")
-		}
-		return w.smsProvider.Send(ctx, notification)
-	case model.ChannelSlack:
-		if w.slackProvider == nil {
-			return fmt.Errorf("Slack provider not configured")
-		}
-		return w.slackProvider.Send(ctx, notification)
-	default:
-		return fmt.Errorf("unknown channel: %s", notification.Channel)
-	}
+	return w.notifier.Send(ctx, notification)
 }
