@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"notification-system/pkg/config"
@@ -37,9 +38,9 @@ func (d *Database) Close() error {
 	return nil
 }
 
-func (d *Database) SaveNotification(n model.Notification) error {
+func (d *Database) SaveNotification(ctx context.Context, n model.Notification) error {
 	metadata, _ := json.Marshal(n.Metadata)
-	_, err := d.db.NamedExec(`
+	_, err := d.db.NamedExecContext(ctx, `
 		INSERT INTO notifications (id, channel, recipient, message, metadata, status, attempts, created_at)
 		VALUES (:id, :channel, :recipient, :message, :metadata, :status, :attempts, :created_at)`,
 		map[string]interface{}{
@@ -55,9 +56,9 @@ func (d *Database) SaveNotification(n model.Notification) error {
 	return err
 }
 
-func (d *Database) UpdateNotificationStatus(n model.Notification) error {
+func (d *Database) UpdateNotificationStatus(ctx context.Context, n model.Notification) error {
 	metadata, _ := json.Marshal(n.Metadata)
-	_, err := d.db.NamedExec(`
+	_, err := d.db.NamedExecContext(ctx, `
 		UPDATE notifications SET status = :status, attempts = :attempts, last_error = :last_error, last_tried = :last_tried, metadata = :metadata
 		WHERE id = :id`,
 		map[string]interface{}{
@@ -71,9 +72,9 @@ func (d *Database) UpdateNotificationStatus(n model.Notification) error {
 	return err
 }
 
-func (d *Database) GetNotificationByID(id string) (*model.Notification, error) {
+func (d *Database) GetNotificationByID(ctx context.Context, id string) (*model.Notification, error) {
 	var n model.Notification
-	row := d.db.QueryRowx("SELECT * FROM notifications WHERE id = $1", id)
+	row := d.db.QueryRowxContext(ctx, "SELECT * FROM notifications WHERE id = $1", id)
 	if err := row.StructScan(&n); err != nil {
 		return nil, err
 	}

@@ -11,8 +11,9 @@ import (
 )
 
 type ServerConfig struct {
-	Port string
-	Host string
+	Port            string
+	Host            string
+	RequestTimeout  int // in seconds
 }
 
 type DatabaseConfig struct {
@@ -24,6 +25,7 @@ type DatabaseConfig struct {
 	MaxOpenConns      int
 	MaxIdleConns      int
 	ConnMaxLifetime   int // in minutes
+	QueryTimeout      int // in seconds
 }
 
 type RabbitMQConfig struct {
@@ -46,6 +48,7 @@ type RetryConfig struct {
 	MaxRetries      int
 	InitialDelayMs  int
 	MaxDelayMs      int
+	ProcessTimeout  int // in seconds
 }
 
 type Config struct {
@@ -66,16 +69,21 @@ func LoadConfig() (*Config, error) {
 	maxRetries, _ := strconv.Atoi(os.Getenv("MAX_RETRY_ATTEMPTS"))
 	initialDelayMs, _ := strconv.Atoi(os.Getenv("INITIAL_RETRY_DELAY_MS"))
 	maxDelayMs, _ := strconv.Atoi(os.Getenv("MAX_RETRY_DELAY_MS"))
+	processTimeout, _ := strconv.Atoi(os.Getenv("PROCESS_TIMEOUT_SECONDS"))
 
 	maxOpenConns, _ := strconv.Atoi(os.Getenv("DB_MAX_OPEN_CONNS"))
 	maxIdleConns, _ := strconv.Atoi(os.Getenv("DB_MAX_IDLE_CONNS"))
 	connMaxLifetime, _ := strconv.Atoi(os.Getenv("DB_CONN_MAX_LIFETIME_MINUTES"))
+	queryTimeout, _ := strconv.Atoi(os.Getenv("DB_QUERY_TIMEOUT_SECONDS"))
+
+	requestTimeout, _ := strconv.Atoi(os.Getenv("REQUEST_TIMEOUT_SECONDS"))
 
 	// Return the config struct populated with values from environment variables
 	return &Config{
 		Server: ServerConfig{
-			Port: os.Getenv("SERVER_PORT"),
-			Host: os.Getenv("SERVER_HOST"),
+			Port:           os.Getenv("SERVER_PORT"),
+			Host:           os.Getenv("SERVER_HOST"),
+			RequestTimeout: requestTimeout,
 		},
 		Database: DatabaseConfig{
 			Host:            os.Getenv("DB_HOST"),
@@ -86,6 +94,7 @@ func LoadConfig() (*Config, error) {
 			MaxOpenConns:    maxOpenConns,
 			MaxIdleConns:    maxIdleConns,
 			ConnMaxLifetime: connMaxLifetime,
+			QueryTimeout:    queryTimeout,
 		},
 		RabbitMQ: RabbitMQConfig{
 			Host:     os.Getenv("RABBITMQ_HOST"),
@@ -108,6 +117,7 @@ func LoadConfig() (*Config, error) {
 			MaxRetries:     maxRetries,
 			InitialDelayMs: initialDelayMs,
 			MaxDelayMs:     maxDelayMs,
+			ProcessTimeout: processTimeout,
 		},
 	}, nil
 }

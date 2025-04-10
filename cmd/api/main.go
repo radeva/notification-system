@@ -26,6 +26,6 @@ func main() {
 	}
 	defer q.Close()
 
-	server := api.NewServer(db, q)
+	server := api.NewServer(db, q, cfg)
 	server.Start()
 }

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -50,7 +51,11 @@ func (w *Worker) processWithRetry(notification model.Notification) error {
 			time.Sleep(delay)
 		}
 
-		err := w.process(notification)
+		// Create a context with timeout for each attempt
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(w.config.Retry.ProcessTimeout)*time.Second)
+		defer cancel()
+
+		err := w.process(ctx, notification)
 		if err == nil {
 			return nil
 		}
@@ -100,7 +105,7 @@ func (w *Worker) processChannel(channel model.NotificationChannel) {
 	}
 }
 
-func (w *Worker) process(notification model.Notification) error {
+func (w *Worker) process(ctx context.Context, notification model.Notification) error {
 	switch notification.Channel {
 	case model.ChannelEmail:
 		fmt.Print("processing email")
