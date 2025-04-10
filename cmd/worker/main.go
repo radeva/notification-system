@@ -29,6 +29,6 @@ func main() {
 
 	smsService := services.NewSMSService(cfg.Twilio)
 	
-	w := worker.NewWorker(db, q, smsService, cfg.Retry)
+	w := worker.NewWorker(db, q, smsService, *cfg)
 	w.Start()
 }

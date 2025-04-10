@@ -16,10 +16,10 @@ type Worker struct {
 	db          *storage.Database
 	queue       *queue.QueueClient
 	smsService  *services.SMSService
-	config      config.RetryConfig
+	config      config.Config
 }
 
-func NewWorker(db *storage.Database, queue *queue.QueueClient, smsService *services.SMSService, config config.RetryConfig) *Worker {
+func NewWorker(db *storage.Database, queue *queue.QueueClient, smsService *services.SMSService, config config.Config) *Worker {
 	return &Worker{
 		db:         db,
 		queue:      queue,
@@ -40,12 +40,12 @@ func (w *Worker) Start() {
 
 func (w *Worker) processWithRetry(notification model.Notification) error {
 	var lastErr error
-	for attempt := 0; attempt < w.config.MaxRetries; attempt++ {
+	for attempt := 0; attempt < w.config.Retry.MaxRetries; attempt++ {
 		if attempt > 0 {
 			// Calculate delay with exponential backoff
-			delay := time.Duration(w.config.InitialDelayMs) * time.Millisecond * time.Duration(math.Pow(2, float64(attempt-1)))
-			if delay > time.Duration(w.config.MaxDelayMs)*time.Millisecond {
-				delay = time.Duration(w.config.MaxDelayMs) * time.Millisecond
+			delay := time.Duration(w.config.Retry.InitialDelayMs) * time.Millisecond * time.Duration(math.Pow(2, float64(attempt-1)))
+			if delay > time.Duration(w.config.Retry.MaxDelayMs)*time.Millisecond {
+				delay = time.Duration(w.config.Retry.MaxDelayMs) * time.Millisecond
 			}
 			time.Sleep(delay)
 		}
@@ -57,7 +57,7 @@ func (w *Worker) processWithRetry(notification model.Notification) error {
 		lastErr = err
 		fmt.Printf("Attempt %d failed: %v\n", attempt+1, err)
 	}
-	return fmt.Errorf("failed after %d attempts, last error: %v", w.config.MaxRetries, lastErr)
+	return fmt.Errorf("failed after %d attempts, last error: %v", w.config.Retry.MaxRetries, lastErr)
 }
 
 func (w *Worker) processChannel(channel model.NotificationChannel) {
@@ -77,7 +77,19 @@ func (w *Worker) processChannel(channel model.NotificationChannel) {
 
 		if err := w.processWithRetry(notification); err != nil {
 			fmt.Printf("Failed to process notification for channel %s after retries: %v\n", channel, err)
-			msg.Nack(false, true) // Requeue the message after all retries failed
+			
+			// Send to DLQ after all retries are exhausted
+			dlqName := w.config.RabbitMQ.DLQPrefix + string(channel)
+			if err := w.queue.PublishToQueue(dlqName, msg.Body); err != nil {
+				fmt.Printf("Failed to publish message to DLQ %s: %v\n", dlqName, err)
+				msg.Nack(false, true) // Requeue if DLQ publish fails
+				continue
+			}
+			
+			// Acknowledge the original message since it's now in DLQ
+			if err := msg.Ack(false); err != nil {
+				fmt.Printf("Failed to acknowledge message for channel %s: %v\n", channel, err)
+			}
 			continue
 		}
 

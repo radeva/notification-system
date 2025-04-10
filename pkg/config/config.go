@@ -30,6 +30,7 @@ type RabbitMQConfig struct {
 	Password      string
 	Queue         string
 	ChannelQueues map[model.NotificationChannel]string
+	DLQPrefix     string
 }
 
 type TwilioConfig struct {
@@ -86,6 +87,7 @@ func LoadConfig() (*Config, error) {
 				model.ChannelEmail: os.Getenv("RABBITMQ_EMAIL_QUEUE"),
 				model.ChannelSlack: os.Getenv("RABBITMQ_SLACK_QUEUE"),
 			},
+			DLQPrefix: os.Getenv("RABBITMQ_DLQ_PREFIX"),
 		},
 		Twilio: TwilioConfig{
 			AccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),

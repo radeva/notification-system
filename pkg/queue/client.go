@@ -119,6 +119,33 @@ func (q *QueueClient) Consume(channel model.NotificationChannel) (<-chan amqp.De
 	)
 }
 
+func (q *QueueClient) PublishToQueue(queueName string, body []byte) error {
+	// Declare the queue if it doesn't exist
+	_, err := q.channel.QueueDeclare(
+		queueName,
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("failed to declare queue %s: %w", queueName, err)
+	}
+
+	return q.channel.Publish(
+		"",         // exchange
+		queueName,  // routing key
+		false,      // mandatory
+		false,      // immediate
+		amqp.Publishing{
+			ContentType:  "application/json",
+			Body:         body,
+			DeliveryMode: amqp.Persistent, // Make message persistent
+		},
+	)
+}
+
 func (q *QueueClient) Close() error {
 	if q.channel != nil {
 		return q.channel.Close()
