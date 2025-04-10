@@ -7,8 +7,8 @@ import (
 	"math"
 	"notification-system/pkg/config"
 	"notification-system/pkg/model"
+	"notification-system/pkg/providers"
 	"notification-system/pkg/queue"
-	"notification-system/pkg/services"
 	"notification-system/pkg/storage"
 	"time"
 )
@@ -16,16 +16,30 @@ import (
 type Worker struct {
 	db          *storage.Database
 	queue       *queue.QueueClient
-	smsService  *services.SMSService
-	config      config.Config
+	smsProvider providers.SMSProvider
+	emailProvider providers.EmailProvider
+	slackProvider providers.SlackProvider
+	config      config.RetryConfig
+	dlqPrefix   string
 }
 
-func NewWorker(db *storage.Database, queue *queue.QueueClient, smsService *services.SMSService, config config.Config) *Worker {
+func NewWorker(
+	db *storage.Database,
+	q *queue.QueueClient,
+	smsProvider providers.SMSProvider,
+	emailProvider providers.EmailProvider,
+	slackProvider providers.SlackProvider,
+	config config.RetryConfig,
+	dlqPrefix string,
+) *Worker {
 	return &Worker{
-		db:         db,
-		queue:      queue,
-		smsService: smsService,
-		config:     config,
+		db:           db,
+		queue:        q,
+		smsProvider:  smsProvider,
+		emailProvider: emailProvider,
+		slackProvider: slackProvider,
+		config:       config,
+		dlqPrefix:    dlqPrefix,
 	}
 }
 
@@ -41,18 +55,18 @@ func (w *Worker) Start() {
 
 func (w *Worker) processWithRetry(notification model.Notification) error {
 	var lastErr error
-	for attempt := 0; attempt < w.config.Retry.MaxRetries; attempt++ {
+	for attempt := 0; attempt < w.config.MaxRetries; attempt++ {
 		if attempt > 0 {
 			// Calculate delay with exponential backoff
-			delay := time.Duration(w.config.Retry.InitialDelayMs) * time.Millisecond * time.Duration(math.Pow(2, float64(attempt-1)))
-			if delay > time.Duration(w.config.Retry.MaxDelayMs)*time.Millisecond {
-				delay = time.Duration(w.config.Retry.MaxDelayMs) * time.Millisecond
+			delay := time.Duration(w.config.InitialDelayMs) * time.Millisecond * time.Duration(math.Pow(2, float64(attempt-1)))
+			if delay > time.Duration(w.config.MaxDelayMs)*time.Millisecond {
+				delay = time.Duration(w.config.MaxDelayMs) * time.Millisecond
 			}
 			time.Sleep(delay)
 		}
 
 		// Create a context with timeout for each attempt
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(w.config.Retry.ProcessTimeout)*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(w.config.ProcessTimeout)*time.Second)
 		defer cancel()
 
 		err := w.process(ctx, notification)
@@ -62,7 +76,7 @@ func (w *Worker) processWithRetry(notification model.Notification) error {
 		lastErr = err
 		fmt.Printf("Attempt %d failed: %v\n", attempt+1, err)
 	}
-	return fmt.Errorf("failed after %d attempts, last error: %v", w.config.Retry.MaxRetries, lastErr)
+	return fmt.Errorf("failed after %d attempts, last error: %v", w.config.MaxRetries, lastErr)
 }
 
 func (w *Worker) processChannel(channel model.NotificationChannel) {
@@ -84,7 +98,7 @@ func (w *Worker) processChannel(channel model.NotificationChannel) {
 			fmt.Printf("Failed to process notification for channel %s after retries: %v\n", channel, err)
 			
 			// Send to DLQ after all retries are exhausted
-			dlqName := w.config.RabbitMQ.DLQPrefix + string(channel)
+			dlqName := w.dlqPrefix + string(channel)
 			if err := w.queue.PublishToQueue(dlqName, msg.Body); err != nil {
 				fmt.Printf("Failed to publish message to DLQ %s: %v\n", dlqName, err)
 				msg.Nack(false, true) // Requeue if DLQ publish fails
@@ -108,15 +122,20 @@ func (w *Worker) processChannel(channel model.NotificationChannel) {
 func (w *Worker) process(ctx context.Context, notification model.Notification) error {
 	switch notification.Channel {
 	case model.ChannelEmail:
-		fmt.Print("processing email")
-		return nil
+		if w.emailProvider == nil {
+			return fmt.Errorf("email provider not configured")
+		}
+		return w.emailProvider.Send(notification)
 	case model.ChannelSMS:
-		// return w.smsService.SendNotification(notification)
-		fmt.Print("processing sms")
-		return nil
+		if w.smsProvider == nil {
+			return fmt.Errorf("SMS provider not configured")
+		}
+		return w.smsProvider.Send(notification)
 	case model.ChannelSlack:
-		fmt.Print("processing slack")
-		return nil
+		if w.slackProvider == nil {
+			return fmt.Errorf("Slack provider not configured")
+		}
+		return w.slackProvider.Send(notification)
 	default:
 		return fmt.Errorf("unknown channel: %s", notification.Channel)
 	}
