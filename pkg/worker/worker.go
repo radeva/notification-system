@@ -125,17 +125,17 @@ func (w *Worker) process(ctx context.Context, notification model.Notification) e
 		if w.emailProvider == nil {
 			return fmt.Errorf("email provider not configured")
 		}
-		return w.emailProvider.Send(notification)
+		return w.emailProvider.Send(ctx, notification)
 	case model.ChannelSMS:
 		if w.smsProvider == nil {
 			return fmt.Errorf("SMS provider not configured")
 		}
-		return w.smsProvider.Send(notification)
+		return w.smsProvider.Send(ctx, notification)
 	case model.ChannelSlack:
 		if w.slackProvider == nil {
 			return fmt.Errorf("Slack provider not configured")
 		}
-		return w.slackProvider.Send(notification)
+		return w.slackProvider.Send(ctx, notification)
 	default:
 		return fmt.Errorf("unknown channel: %s", notification.Channel)
 	}

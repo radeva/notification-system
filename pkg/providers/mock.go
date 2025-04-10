@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"notification-system/pkg/model"
 	"sync"
@@ -19,7 +20,7 @@ func NewMockSMSProvider() *MockSMSProvider {
 	}
 }
 
-func (m *MockSMSProvider) Send(notification model.Notification) error {
+func (m *MockSMSProvider) Send(ctx context.Context, notification model.Notification) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -58,7 +59,7 @@ func NewMockEmailProvider() *MockEmailProvider {
 	}
 }
 
-func (m *MockEmailProvider) Send(notification model.Notification) error {
+func (m *MockEmailProvider) Send(ctx context.Context, notification model.Notification) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -97,7 +98,7 @@ func NewMockSlackProvider() *MockSlackProvider {
 	}
 }
 
-func (m *MockSlackProvider) Send(notification model.Notification) error {
+func (m *MockSlackProvider) Send(ctx context.Context, notification model.Notification) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"notification-system/pkg/config"
@@ -27,17 +28,30 @@ func NewTwilioSMSProvider(cfg config.TwilioConfig) *TwilioSMSProvider {
 	}
 }
 
-func (t *TwilioSMSProvider) Send(notification model.Notification) error {
-	params := &api.CreateMessageParams{}
-	params.SetTo(notification.Recipient)
-	params.SetFrom(t.fromNumber)
-	params.SetBody(notification.Message)
+func (t *TwilioSMSProvider) Send(ctx context.Context, notification model.Notification) error {
+	// Create a channel to receive the result
+	result := make(chan error, 1)
 
-	_, err := t.client.Api.CreateMessage(params)
-	if err != nil {
-		return fmt.Errorf("failed to send SMS: %w", err)
+	// Start the send operation in a goroutine
+	go func() {
+		params := &api.CreateMessageParams{}
+		params.SetTo(notification.Recipient)
+		params.SetFrom(t.fromNumber)
+		params.SetBody(notification.Message)
+
+		_, err := t.client.Api.CreateMessage(params)
+		result <- err
+	}()
+
+	// Wait for either the operation to complete or the context to be done
+	select {
+	case err := <-result:
+		if err != nil {
+			return fmt.Errorf("failed to send SMS: %w", err)
+		}
+		log.Printf("SMS sent successfully: %s", notification.Message)
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("SMS send operation timed out: %w", ctx.Err())
 	}
-
-	log.Printf("SMS sent successfully: %s", notification.Message)
-	return nil
 } 
