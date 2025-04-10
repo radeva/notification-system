@@ -16,11 +16,14 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Name     string
+	Host              string
+	Port              string
+	User              string
+	Password          string
+	Name              string
+	MaxOpenConns      int
+	MaxIdleConns      int
+	ConnMaxLifetime   int // in minutes
 }
 
 type RabbitMQConfig struct {
@@ -64,6 +67,10 @@ func LoadConfig() (*Config, error) {
 	initialDelayMs, _ := strconv.Atoi(os.Getenv("INITIAL_RETRY_DELAY_MS"))
 	maxDelayMs, _ := strconv.Atoi(os.Getenv("MAX_RETRY_DELAY_MS"))
 
+	maxOpenConns, _ := strconv.Atoi(os.Getenv("DB_MAX_OPEN_CONNS"))
+	maxIdleConns, _ := strconv.Atoi(os.Getenv("DB_MAX_IDLE_CONNS"))
+	connMaxLifetime, _ := strconv.Atoi(os.Getenv("DB_CONN_MAX_LIFETIME_MINUTES"))
+
 	// Return the config struct populated with values from environment variables
 	return &Config{
 		Server: ServerConfig{
@@ -71,11 +78,14 @@ func LoadConfig() (*Config, error) {
 			Host: os.Getenv("SERVER_HOST"),
 		},
 		Database: DatabaseConfig{
-			Host:     os.Getenv("DB_HOST"),
-			Port:     os.Getenv("DB_PORT"),
-			User:     os.Getenv("DB_USER"),
-			Password: os.Getenv("DB_PASSWORD"),
-			Name:     os.Getenv("DB_NAME"),
+			Host:            os.Getenv("DB_HOST"),
+			Port:            os.Getenv("DB_PORT"),
+			User:            os.Getenv("DB_USER"),
+			Password:        os.Getenv("DB_PASSWORD"),
+			Name:            os.Getenv("DB_NAME"),
+			MaxOpenConns:    maxOpenConns,
+			MaxIdleConns:    maxIdleConns,
+			ConnMaxLifetime: connMaxLifetime,
 		},
 		RabbitMQ: RabbitMQConfig{
 			Host:     os.Getenv("RABBITMQ_HOST"),

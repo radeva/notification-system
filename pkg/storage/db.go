@@ -22,11 +22,10 @@ func NewDatabase(cfg config.DatabaseConfig) (*Database, error) {
 		return nil, fmt.Errorf("failed to connect to DB: %w", err)
 	}
 
-	// Set connection pool settings
-    db.SetMaxOpenConns(25) // TODO: Make this configurable
-    db.SetMaxIdleConns(25) // TODO: Make this configurable
-    db.SetConnMaxLifetime(5 * time.Minute) // TODO: Make this configurable
-
+	// Set connection pool settings from config
+	db.SetMaxOpenConns(cfg.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.MaxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetime) * time.Minute)
 
 	return &Database{db: db}, nil
 }
