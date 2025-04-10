@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"notification-system/pkg/model"
 
@@ -37,11 +38,18 @@ type TwilioConfig struct {
 	FromNumber string
 }
 
+type RetryConfig struct {
+	MaxRetries      int
+	InitialDelayMs  int
+	MaxDelayMs      int
+}
+
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Twilio   TwilioConfig
 	RabbitMQ RabbitMQConfig
+	Retry    RetryConfig
 }
 
 func LoadConfig() (*Config, error) {
@@ -50,6 +58,10 @@ func LoadConfig() (*Config, error) {
 		log.Fatal("Error loading .env file")
 		return nil, err
 	}
+
+	maxRetries, _ := strconv.Atoi(os.Getenv("MAX_RETRY_ATTEMPTS"))
+	initialDelayMs, _ := strconv.Atoi(os.Getenv("INITIAL_RETRY_DELAY_MS"))
+	maxDelayMs, _ := strconv.Atoi(os.Getenv("MAX_RETRY_DELAY_MS"))
 
 	// Return the config struct populated with values from environment variables
 	return &Config{
@@ -79,6 +91,11 @@ func LoadConfig() (*Config, error) {
 			AccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
 			AuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
 			FromNumber: os.Getenv("TWILIO_FROM_NUMBER"),
+		},
+		Retry: RetryConfig{
+			MaxRetries:     maxRetries,
+			InitialDelayMs: initialDelayMs,
+			MaxDelayMs:     maxDelayMs,
 		},
 	}, nil
 }
