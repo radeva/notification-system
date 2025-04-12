@@ -74,9 +74,33 @@ func (d *Database) UpdateNotificationStatus(ctx context.Context, n model.Notific
 
 func (d *Database) GetNotificationByID(ctx context.Context, id string) (*model.Notification, error) {
 	var n model.Notification
-	row := d.db.QueryRowxContext(ctx, "SELECT * FROM notifications WHERE id = $1", id)
-	if err := row.StructScan(&n); err != nil {
-		return nil, err
+	var metadataJSON []byte
+
+	err := d.db.QueryRowxContext(ctx, `
+		SELECT id::text, channel, recipient, message, metadata, status, attempts, last_error, last_tried, created_at
+		FROM notifications 
+		WHERE id::text = $1`, id).Scan(
+		&n.ID,
+		&n.Channel,
+		&n.Recipient,
+		&n.Message,
+		&metadataJSON,
+		&n.Status,
+		&n.Attempts,
+		&n.LastError,
+		&n.LastTried,
+		&n.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get notification: %w", err)
 	}
+
+	// Unmarshal metadata if it exists
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &n.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+	}
+
 	return &n, nil
 }

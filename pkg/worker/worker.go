@@ -114,5 +114,30 @@ func (w *Worker) processChannel(channel model.NotificationChannel) {
 }
 
 func (w *Worker) process(ctx context.Context, notification model.Notification) error {
-	return w.notifier.Send(ctx, notification)
+	// Send the notification
+	err := w.notifier.Send(ctx, notification)
+	notification.Attempts++
+	now := time.Now()
+	notification.LastTried = &now
+
+	if err != nil {
+		// Update notification with error
+		notification.Status = model.StatusFailed
+		errorMsg := err.Error()
+		notification.LastError = &errorMsg
+		
+		if dbErr := w.db.UpdateNotificationStatus(ctx, notification); dbErr != nil {
+			fmt.Printf("Failed to update notification status in database: %v\n", dbErr)
+		}
+		return err
+	}
+
+	// Update notification as successful
+	notification.Status = model.StatusSent
+	if dbErr := w.db.UpdateNotificationStatus(ctx, notification); dbErr != nil {
+		fmt.Printf("Failed to update notification status in database: %v\n", dbErr)
+		return dbErr
+	}
+
+	return nil
 }
