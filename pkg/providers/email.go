@@ -11,6 +11,10 @@ import (
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
+const (
+	defaultEmailSubject = "Notification"
+)
+
 type EmailNotificationProvider struct {
 	config *config.EmailConfig
 	client *sendgrid.Client
@@ -32,7 +36,18 @@ func (e *EmailNotificationProvider) Send(ctx context.Context, notification model
 	go func() {
 		from := mail.NewEmail(e.config.FromName, e.config.FromAddress)
 		to := mail.NewEmail("", notification.Recipient)
-		subject := "Notification"
+		
+		// Get subject from metadata for email notifications, fallback to configured default
+		subject := e.config.DefaultSubject
+		if subject == "" {
+			subject = defaultEmailSubject // Fallback to hardcoded default if not configured
+		}
+		if notification.Metadata != nil {
+			if emailSubject, ok := notification.Metadata["email_subject"]; ok {
+				subject = emailSubject
+			}
+		}
+
 		plainTextContent := notification.Message
 		htmlContent := fmt.Sprintf("<p>%s</p>", notification.Message)
 

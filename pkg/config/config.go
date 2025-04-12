@@ -52,6 +52,7 @@ type EmailConfig struct {
 	SendGridAPIKey string
 	FromAddress    string
 	FromName       string
+	DefaultSubject string
 }
 
 type RetryConfig struct {
@@ -135,6 +136,7 @@ func LoadConfig() (*Config, error) {
 		SendGridAPIKey: os.Getenv("SENDGRID_API_KEY"),
 		FromAddress:    os.Getenv("SENDGRID_FROM_ADDRESS"),
 		FromName:       os.Getenv("SENDGRID_FROM_NAME"),
+		DefaultSubject: os.Getenv("EMAIL_DEFAULT_SUBJECT"),
 	}
 
 	retryConfig := RetryConfig{
