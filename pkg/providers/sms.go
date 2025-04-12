@@ -40,7 +40,12 @@ func (t *TwilioSMSProvider) Send(ctx context.Context, notification model.Notific
 		params.SetBody(notification.Message)
 
 		_, err := t.client.Api.CreateMessage(params)
-		result <- err
+		select {
+		case result <- err:
+			// Successfully sent result
+		case <-ctx.Done():
+			// Context was cancelled, discard the result
+		}
 	}()
 
 	// Wait for either the operation to complete or the context to be done
@@ -54,4 +59,4 @@ func (t *TwilioSMSProvider) Send(ctx context.Context, notification model.Notific
 	case <-ctx.Done():
 		return fmt.Errorf("SMS send operation timed out: %w", ctx.Err())
 	}
-} 
+}

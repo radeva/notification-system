@@ -34,7 +34,11 @@ func main() {
 	// Register providers
 	smsProvider := providers.NewTwilioSMSProvider(cfg.Twilio)
 	notifier.RegisterStrategy(model.ChannelSMS, smsProvider)
-	// TODO: Register email and Slack providers when implemented
+
+	slackProvider := providers.NewSlackNotificationProvider(cfg.Slack)
+	notifier.RegisterStrategy(model.ChannelSlack, slackProvider)
+	
+	// TODO: Register email provider when implemented
 	
 	w := worker.NewWorker(
 		db,

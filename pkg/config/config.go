@@ -44,6 +44,10 @@ type TwilioConfig struct {
 	FromNumber string
 }
 
+type SlackConfig struct {
+	BotToken string
+}
+
 type RetryConfig struct {
 	MaxRetries      int
 	InitialDelayMs  int
@@ -54,8 +58,9 @@ type RetryConfig struct {
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
-	Twilio   TwilioConfig
 	RabbitMQ RabbitMQConfig
+	Twilio   TwilioConfig
+	Slack    SlackConfig
 	Retry    RetryConfig
 }
 
@@ -78,46 +83,60 @@ func LoadConfig() (*Config, error) {
 
 	requestTimeout, _ := strconv.Atoi(os.Getenv("REQUEST_TIMEOUT_SECONDS"))
 
-	// Return the config struct populated with values from environment variables
+	serverConfig := ServerConfig{
+		Port:           os.Getenv("SERVER_PORT"),
+		Host:           os.Getenv("SERVER_HOST"),
+		RequestTimeout: requestTimeout,
+	}
+
+	dbConfig := DatabaseConfig{
+		Host:            os.Getenv("DB_HOST"),
+		Port:            os.Getenv("DB_PORT"),
+		User:            os.Getenv("DB_USER"),
+		Password:        os.Getenv("DB_PASSWORD"),
+		Name:            os.Getenv("DB_NAME"),
+		MaxOpenConns:    maxOpenConns,
+		MaxIdleConns:    maxIdleConns,
+		ConnMaxLifetime: connMaxLifetime,
+		QueryTimeout:    queryTimeout,
+	}
+
+	rabbitMQConfig := RabbitMQConfig{
+		Host:     os.Getenv("RABBITMQ_HOST"),
+		Port:     os.Getenv("RABBITMQ_PORT"),
+		User:     os.Getenv("RABBITMQ_USER"),
+		Password: os.Getenv("RABBITMQ_PASS"),
+		ChannelQueues: map[model.NotificationChannel]string {
+			model.ChannelSMS: os.Getenv("RABBITMQ_SMS_QUEUE"),
+			model.ChannelEmail: os.Getenv("RABBITMQ_EMAIL_QUEUE"),
+			model.ChannelSlack: os.Getenv("RABBITMQ_SLACK_QUEUE"),
+		},
+		DLQPrefix: os.Getenv("RABBITMQ_DLQ_PREFIX"),
+	}
+
+	twilioConfig := TwilioConfig{
+		AccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
+		AuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
+		FromNumber: os.Getenv("TWILIO_FROM_NUMBER"),
+	}
+
+	slackConfig := SlackConfig{
+		BotToken: os.Getenv("SLACK_BOT_TOKEN"),
+	}
+
+	retryConfig := RetryConfig{
+		MaxRetries:     maxRetries,
+		InitialDelayMs: initialDelayMs,
+		MaxDelayMs:     maxDelayMs,
+		ProcessTimeout: processTimeout,
+	}
+
 	return &Config{
-		Server: ServerConfig{
-			Port:           os.Getenv("SERVER_PORT"),
-			Host:           os.Getenv("SERVER_HOST"),
-			RequestTimeout: requestTimeout,
-		},
-		Database: DatabaseConfig{
-			Host:            os.Getenv("DB_HOST"),
-			Port:            os.Getenv("DB_PORT"),
-			User:            os.Getenv("DB_USER"),
-			Password:        os.Getenv("DB_PASSWORD"),
-			Name:            os.Getenv("DB_NAME"),
-			MaxOpenConns:    maxOpenConns,
-			MaxIdleConns:    maxIdleConns,
-			ConnMaxLifetime: connMaxLifetime,
-			QueryTimeout:    queryTimeout,
-		},
-		RabbitMQ: RabbitMQConfig{
-			Host:     os.Getenv("RABBITMQ_HOST"),
-			Port:     os.Getenv("RABBITMQ_PORT"),
-			User:     os.Getenv("RABBITMQ_USER"),
-			Password: os.Getenv("RABBITMQ_PASS"),
-			ChannelQueues:    map[model.NotificationChannel]string {
-				model.ChannelSMS: os.Getenv("RABBITMQ_SMS_QUEUE"),
-				model.ChannelEmail: os.Getenv("RABBITMQ_EMAIL_QUEUE"),
-				model.ChannelSlack: os.Getenv("RABBITMQ_SLACK_QUEUE"),
-			},
-			DLQPrefix: os.Getenv("RABBITMQ_DLQ_PREFIX"),
-		},
-		Twilio: TwilioConfig{
-			AccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
-			AuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
-			FromNumber: os.Getenv("TWILIO_FROM_NUMBER"),
-		},
-		Retry: RetryConfig{
-			MaxRetries:     maxRetries,
-			InitialDelayMs: initialDelayMs,
-			MaxDelayMs:     maxDelayMs,
-			ProcessTimeout: processTimeout,
-		},
+		Server:   serverConfig,
+		Database: dbConfig,
+		RabbitMQ: rabbitMQConfig,
+		Twilio:   twilioConfig,
+		Slack:    slackConfig,
+		Retry:    retryConfig,
 	}, nil
 }
