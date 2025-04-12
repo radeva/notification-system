@@ -29,4 +29,12 @@ func (c *NotificationStrategyContext) Send(ctx context.Context, notification mod
 		return fmt.Errorf("no provider registered for channel: %s", notification.Channel)
 	}
 	return provider.Send(ctx, notification)
+}
+
+func (n *NotificationStrategyContext) GetStrategy(channel model.NotificationChannel) (NotificationProvider, error) {
+	provider, exists := n.strategies[channel]
+	if !exists {
+		return nil, fmt.Errorf("no provider registered for channel %s", channel)
+	}
+	return provider, nil
 } 

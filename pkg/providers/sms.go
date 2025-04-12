@@ -6,9 +6,14 @@ import (
 	"log"
 	"notification-system/pkg/config"
 	"notification-system/pkg/model"
+	"regexp"
 
 	"github.com/twilio/twilio-go"
 	api "github.com/twilio/twilio-go/rest/api/v2010"
+)
+
+var (
+	phoneRegex = regexp.MustCompile(`^\+?[1-9]\d{1,14}$`) // E.164 format
 )
 
 type TwilioSMSProvider struct {
@@ -59,4 +64,25 @@ func (t *TwilioSMSProvider) Send(ctx context.Context, notification model.Notific
 	case <-ctx.Done():
 		return fmt.Errorf("SMS send operation timed out: %w", ctx.Err())
 	}
+}
+
+func (s *TwilioSMSProvider) Validate(notification model.Notification) error {
+	if notification.Message == "" {
+		return fmt.Errorf("message cannot be empty")
+	}
+
+	if notification.Recipient == "" {
+		return fmt.Errorf("recipient cannot be empty")
+	}
+
+	if !phoneRegex.MatchString(notification.Recipient) {
+		return fmt.Errorf("invalid phone number format: %s. Must be in E.164 format", notification.Recipient)
+	}
+
+	// Check message length (SMS has character limits)
+	if len(notification.Message) > 160 {
+		return fmt.Errorf("SMS message exceeds 160 character limit")
+	}
+
+	return nil
 }

@@ -5,8 +5,14 @@ import (
 	"notification-system/pkg/model"
 )
 
+// Validator defines the interface for validating notifications
+type Validator interface {
+	Validate(notification model.Notification) error
+}
+
 // NotificationProvider defines the interface for sending notifications
 type NotificationProvider interface {
+	Validator
 	Send(ctx context.Context, notification model.Notification) error
 }
 

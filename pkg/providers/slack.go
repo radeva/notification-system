@@ -52,4 +52,25 @@ func (s *SlackNotificationProvider) Send(ctx context.Context, notification model
 	case <-ctx.Done():
 		return fmt.Errorf("slack message send operation cancelled: %w", ctx.Err())
 	}
+}
+
+func (s *SlackNotificationProvider) Validate(notification model.Notification) error {
+	if notification.Message == "" {
+		return fmt.Errorf("message cannot be empty")
+	}
+
+	if notification.Recipient == "" {
+		return fmt.Errorf("channel ID cannot be empty")
+	}
+
+	// Verify that the channel exists and is accessible
+	ctx := context.Background()
+	_, err := s.client.GetConversationInfoContext(ctx, &slack.GetConversationInfoInput{
+		ChannelID: notification.Recipient,
+	})
+	if err != nil {
+		return fmt.Errorf("invalid or inaccessible channel ID: %v", err)
+	}
+
+	return nil
 } 

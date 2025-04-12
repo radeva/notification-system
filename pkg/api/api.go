@@ -2,9 +2,11 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"notification-system/pkg/config"
 	"notification-system/pkg/model"
+	"notification-system/pkg/providers"
 	"notification-system/pkg/queue"
 	"notification-system/pkg/storage"
 	"time"
@@ -14,16 +16,18 @@ import (
 )
 
 type Server struct {
-	db    *storage.Database
-	queue *queue.QueueClient
-	cfg   *config.Config
+	db       *storage.Database
+	queue    *queue.QueueClient
+	cfg      *config.Config
+	notifier *providers.NotificationStrategyContext
 }
 
-func NewServer(db *storage.Database, q *queue.QueueClient, cfg *config.Config) *Server {
+func NewServer(db *storage.Database, q *queue.QueueClient, cfg *config.Config, notifier *providers.NotificationStrategyContext) *Server {
 	return &Server{
-		db:    db,
-		queue: q,
-		cfg:   cfg,
+		db:       db,
+		queue:    q,
+		cfg:      cfg,
+		notifier: notifier,
 	}
 }
 
@@ -31,29 +35,43 @@ func (s *Server) Start() {
 	r := gin.Default()
 
 	r.POST("/notifications", func(c *gin.Context) {
+		var notification model.Notification
+		if err := c.ShouldBindJSON(&notification); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+			return
+		}
+
+		// Get the appropriate provider for validation
+		provider, err := s.notifier.GetStrategy(notification.Channel)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid channel type: %v", err)})
+			return
+		}
+
+		// Validate using the provider
+		if err := provider.Validate(notification); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid notification: %v", err)})
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(c.Request.Context(), time.Duration(s.cfg.Server.RequestTimeout)*time.Second)
 		defer cancel()
 
-		var req model.Notification
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		req.ID = uuid.New().String()
-		req.Status = model.StatusPending
-		req.CreatedAt = time.Now()
+		notification.ID = uuid.New().String()
+		notification.Status = model.StatusPending
+		notification.CreatedAt = time.Now()
 
-		if err := s.db.SaveNotification(ctx, req); err != nil {
+		if err := s.db.SaveNotification(ctx, notification); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save notification"})
 			return
 		}
 
-		if err := s.queue.Publish(req); err != nil {
+		if err := s.queue.Publish(notification); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to queue message"})
 			return
 		}
 
-		c.JSON(http.StatusAccepted, gin.H{"id": req.ID, "status": req.Status})
+		c.JSON(http.StatusAccepted, gin.H{"id": notification.ID, "status": notification.Status})
 	})
 
 	r.GET("/notifications/:id/status", func(c *gin.Context) {
