@@ -37,8 +37,9 @@ func main() {
 
 	slackProvider := providers.NewSlackNotificationProvider(cfg.Slack)
 	notifier.RegisterStrategy(model.ChannelSlack, slackProvider)
-	
-	// TODO: Register email provider when implemented
+
+	emailProvider := providers.NewEmailNotificationProvider(cfg.Email)
+	notifier.RegisterStrategy(model.ChannelEmail, emailProvider)
 	
 	w := worker.NewWorker(
 		db,

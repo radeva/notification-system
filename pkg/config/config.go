@@ -48,6 +48,12 @@ type SlackConfig struct {
 	BotToken string
 }
 
+type EmailConfig struct {
+	SendGridAPIKey string
+	FromAddress    string
+	FromName       string
+}
+
 type RetryConfig struct {
 	MaxRetries      int
 	InitialDelayMs  int
@@ -61,6 +67,7 @@ type Config struct {
 	RabbitMQ RabbitMQConfig
 	Twilio   TwilioConfig
 	Slack    SlackConfig
+	Email    EmailConfig
 	Retry    RetryConfig
 }
 
@@ -124,6 +131,12 @@ func LoadConfig() (*Config, error) {
 		BotToken: os.Getenv("SLACK_BOT_TOKEN"),
 	}
 
+	emailConfig := EmailConfig{
+		SendGridAPIKey: os.Getenv("SENDGRID_API_KEY"),
+		FromAddress:    os.Getenv("SENDGRID_FROM_ADDRESS"),
+		FromName:       os.Getenv("SENDGRID_FROM_NAME"),
+	}
+
 	retryConfig := RetryConfig{
 		MaxRetries:     maxRetries,
 		InitialDelayMs: initialDelayMs,
@@ -137,6 +150,7 @@ func LoadConfig() (*Config, error) {
 		RabbitMQ: rabbitMQConfig,
 		Twilio:   twilioConfig,
 		Slack:    slackConfig,
+		Email:    emailConfig,
 		Retry:    retryConfig,
 	}, nil
 }
