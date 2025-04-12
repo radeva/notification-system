@@ -20,16 +20,49 @@ var (
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 )
 
-type EmailNotificationProvider struct {
-	config *config.EmailConfig
+// EmailClient defines the interface for sending emails
+type EmailClient interface {
+	Send(email *mail.SGMailV3) error
+	SendWithContext(ctx context.Context, email *mail.SGMailV3) error
+}
+
+// SendGridClient wraps the SendGrid client to implement our EmailClient interface
+type SendGridClient struct {
 	client *sendgrid.Client
 }
 
+func NewSendGridClient(apiKey string) *SendGridClient {
+	return &SendGridClient{
+		client: sendgrid.NewSendClient(apiKey),
+	}
+}
+
+func (s *SendGridClient) Send(email *mail.SGMailV3) error {
+	return s.SendWithContext(context.Background(), email)
+}
+
+func (s *SendGridClient) SendWithContext(ctx context.Context, email *mail.SGMailV3) error {
+	response, err := s.client.SendWithContext(ctx, email)
+	if err != nil {
+		return fmt.Errorf("failed to send email: %w", err)
+	}
+
+	if response.StatusCode >= 300 {
+		return fmt.Errorf("sendgrid API error: %d - %s", response.StatusCode, response.Body)
+	}
+
+	return nil
+}
+
+type EmailNotificationProvider struct {
+	config *config.EmailConfig
+	client EmailClient
+}
+
 func NewEmailNotificationProvider(cfg config.EmailConfig) *EmailNotificationProvider {
-	client := sendgrid.NewSendClient(cfg.SendGridAPIKey)
 	return &EmailNotificationProvider{
 		config: &cfg,
-		client: client,
+		client: NewSendGridClient(cfg.SendGridAPIKey),
 	}
 }
 
@@ -58,14 +91,9 @@ func (e *EmailNotificationProvider) Send(ctx context.Context, notification model
 
 		message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
 
-		response, err := e.client.SendWithContext(ctx, message)
+		err := e.client.SendWithContext(ctx, message)
 		if err != nil {
-			result <- fmt.Errorf("failed to send email: %w", err)
-			return
-		}
-
-		if response.StatusCode >= 300 {
-			result <- fmt.Errorf("sendgrid API error: %d - %s", response.StatusCode, response.Body)
+			result <- err
 			return
 		}
 
