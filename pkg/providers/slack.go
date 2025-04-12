@@ -50,6 +50,6 @@ func (s *SlackNotificationProvider) Send(ctx context.Context, notification model
 		log.Printf("Slack message sent successfully: %s", notification.Message)
 		return nil
 	case <-ctx.Done():
-		return fmt.Errorf("Slack message send operation cancelled: %w", ctx.Err())
+		return fmt.Errorf("slack message send operation cancelled: %w", ctx.Err())
 	}
 } 
