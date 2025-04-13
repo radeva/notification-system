@@ -11,6 +11,7 @@ import (
 
 const (
 	exchangeName = "notifications"
+	dlqExchangeName = "notifications.dlq"
 )
 
 type QueueClient struct {
@@ -29,7 +30,7 @@ func NewQueueClient(cfg config.RabbitMQConfig) (*QueueClient, error) {
 		return nil, fmt.Errorf("failed to open channel: %w", err)
 	}
 
-	// Declare a durable exchange
+	// Declare the main exchange
 	err = ch.ExchangeDeclare(
 		exchangeName, // exchange name
 		"direct",     // type
@@ -40,13 +41,45 @@ func NewQueueClient(cfg config.RabbitMQConfig) (*QueueClient, error) {
 		nil,          // arguments
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to declare exchange: %w", err)
+		return nil, fmt.Errorf("failed to declare main exchange: %w", err)
+	}
+
+	// Declare the DLQ exchange
+	err = ch.ExchangeDeclare(
+		dlqExchangeName, // exchange name
+		"direct",        // type
+		true,            // durable
+		false,           // auto-deleted
+		false,           // internal
+		false,           // no-wait
+		nil,             // arguments
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to declare DLQ exchange: %w", err)
 	}
 
 	// Declare all channel-specific queues
 	for channel, queueName := range cfg.ChannelQueues {
+		// Declare the main queue
 		_, err = ch.QueueDeclare(
 			queueName,
+			true,  // durable
+			false, // delete when unused
+			false, // exclusive
+			false, // no-wait
+			amqp.Table{
+				"x-dead-letter-exchange": dlqExchangeName,
+				"x-dead-letter-routing-key": queueName + ".dlq",
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to declare queue for channel %s: %w", channel, err)
+		}
+
+		// Declare the DLQ queue
+		dlqQueueName := queueName + ".dlq"
+		_, err = ch.QueueDeclare(
+			dlqQueueName,
 			true,  // durable
 			false, // delete when unused
 			false, // exclusive
@@ -54,10 +87,10 @@ func NewQueueClient(cfg config.RabbitMQConfig) (*QueueClient, error) {
 			nil,   // arguments
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to declare queue for channel %s: %w", channel, err)
+			return nil, fmt.Errorf("failed to declare DLQ queue for channel %s: %w", channel, err)
 		}
 
-		// Bind queue to exchange
+		// Bind main queue to main exchange
 		err = ch.QueueBind(
 			queueName,      // queue name
 			string(channel), // routing key
@@ -69,7 +102,19 @@ func NewQueueClient(cfg config.RabbitMQConfig) (*QueueClient, error) {
 			return nil, fmt.Errorf("failed to bind queue for channel %s: %w", channel, err)
 		}
 
-		fmt.Printf("Declared and bound queue %s for channel %s\n", queueName, channel)
+		// Bind DLQ queue to DLQ exchange
+		err = ch.QueueBind(
+			dlqQueueName,           // queue name
+			queueName + ".dlq",     // routing key
+			dlqExchangeName,        // exchange
+			false,                  // no-wait
+			nil,                    // arguments
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to bind DLQ queue for channel %s: %w", channel, err)
+		}
+
+		fmt.Printf("Declared and bound queues for channel %s: %s (main) and %s (DLQ)\n", channel, queueName, dlqQueueName)
 	}
 
 	return &QueueClient{
@@ -116,33 +161,6 @@ func (q *QueueClient) Consume(channel model.NotificationChannel) (<-chan amqp.De
 		false, // no-local
 		false, // no-wait
 		nil,   // args
-	)
-}
-
-func (q *QueueClient) PublishToQueue(queueName string, body []byte) error {
-	// Declare the queue if it doesn't exist
-	_, err := q.channel.QueueDeclare(
-		queueName,
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
-	if err != nil {
-		return fmt.Errorf("failed to declare queue %s: %w", queueName, err)
-	}
-
-	return q.channel.Publish(
-		"",         // exchange
-		queueName,  // routing key
-		false,      // mandatory
-		false,      // immediate
-		amqp.Publishing{
-			ContentType:  "application/json",
-			Body:         body,
-			DeliveryMode: amqp.Persistent, // Make message persistent
-		},
 	)
 }
 

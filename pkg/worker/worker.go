@@ -92,17 +92,7 @@ func (w *Worker) processChannel(channel model.NotificationChannel) {
 			fmt.Printf("Failed to process notification for channel %s after retries: %v\n", channel, err)
 			
 			// Send to DLQ after all retries are exhausted
-			dlqName := w.dlqPrefix + string(channel)
-			if err := w.queue.PublishToQueue(dlqName, msg.Body); err != nil {
-				fmt.Printf("Failed to publish message to DLQ %s: %v\n", dlqName, err)
-				msg.Nack(false, true) // Requeue if DLQ publish fails
-				continue
-			}
-			
-			// Acknowledge the original message since it's now in DLQ
-			if err := msg.Ack(false); err != nil {
-				fmt.Printf("Failed to acknowledge message for channel %s: %v\n", channel, err)
-			}
+			msg.Nack(false, false) // Do not requeue. This will send the message to the DLQ	
 			continue
 		}
 
