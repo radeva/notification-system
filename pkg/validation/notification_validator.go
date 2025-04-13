@@ -8,7 +8,8 @@ import (
 
 var (
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	phoneRegex = regexp.MustCompile(`^\+?[1-9]\d{1,14}$`) // E.164 format
+	phoneRegex = regexp.MustCompile(`^\+[1-9]\d{1,14}$`) // E.164 format with required + prefix
+	slackChannelIDRegex = regexp.MustCompile(`^[CG][A-Z0-9]{8,10}$`)
 )
 
 // Validator defines the interface for notification validation
@@ -47,6 +48,10 @@ func (v *NotificationValidator) Validate(notification *model.Notification) error
 		// Check message length (SMS has character limits)
 		if len(notification.Message) > 160 {
 			return fmt.Errorf("SMS message exceeds 160 character limit")
+		}
+	case model.ChannelSlack:
+		if !slackChannelIDRegex.MatchString(notification.Recipient) {
+			return fmt.Errorf("invalid slack channel ID format: %s. Must start with C or G followed by 8-10 alphanumeric characters", notification.Recipient)
 		}
 	}
 
