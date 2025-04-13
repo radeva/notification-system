@@ -14,10 +14,10 @@ This project implements a notification system having the following requirements:
 
 ### Main Components
 
-- _API server_ handles the notification requests, validates them and sends the corresponding messages to the RabbitMQ
-- _Worker_ reads messages from the queues and processes them according the requested message provider
-- _Status Database_ - both API Server and Worker save notification's current status and the number of attempts tried to send the message
-- _Rabbit MQ_ receives the messages from the API Server and sends unacknowledged messages to the corresponding DLQ (dead letter queue)
+- **API server** handles the notification requests, validates them and sends the corresponding messages to the RabbitMQ
+- **Worker** reads messages from the queues and processes them according the requested message provider
+- **Status Database** - both API Server and Worker save notification's current status and the number of attempts tried to send the message
+- **Rabbit MQ** receives the messages from the API Server and sends unacknowledged messages to the corresponding DLQ (dead letter queue)
 
 ## Usage
 
