@@ -6,7 +6,6 @@ import (
 	"log"
 	"notification-system/pkg/config"
 	"notification-system/pkg/model"
-	"regexp"
 
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
@@ -14,10 +13,6 @@ import (
 
 const (
 	defaultEmailSubject = "Notification"
-)
-
-var (
-	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 )
 
 type EmailNotificationProvider struct {
@@ -89,19 +84,3 @@ func (e *EmailNotificationProvider) Send(ctx context.Context, notification model
 		return fmt.Errorf("email send operation cancelled: %w", ctx.Err())
 	}
 }
-
-func (e *EmailNotificationProvider) Validate(notification model.Notification) error {
-	if notification.Message == "" {
-		return fmt.Errorf("message cannot be empty")
-	}
-
-	if notification.Recipient == "" {
-		return fmt.Errorf("recipient cannot be empty")
-	}
-
-	if !emailRegex.MatchString(notification.Recipient) {
-		return fmt.Errorf("invalid email address format: %s", notification.Recipient)
-	}
-
-	return nil
-} 

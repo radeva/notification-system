@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"notification-system/pkg/config"
 	"notification-system/pkg/model"
-	"notification-system/pkg/providers"
 	"notification-system/pkg/queue"
 	"notification-system/pkg/storage"
+	"notification-system/pkg/validation"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,15 +19,15 @@ type Server struct {
 	db       *storage.Database
 	queue    *queue.QueueClient
 	cfg      *config.Config
-	notifier *providers.NotificationStrategyContext
+	validator validation.Validator
 }
 
-func NewServer(db *storage.Database, q *queue.QueueClient, cfg *config.Config, notifier *providers.NotificationStrategyContext) *Server {
+func NewServer(db *storage.Database, q *queue.QueueClient, cfg *config.Config, validator validation.Validator) *Server {
 	return &Server{
 		db:       db,
 		queue:    q,
 		cfg:      cfg,
-		notifier: notifier,
+		validator: validator,
 	}
 }
 
@@ -41,15 +41,7 @@ func (s *Server) Start() {
 			return
 		}
 
-		// Get the appropriate provider for validation
-		provider, err := s.notifier.GetStrategy(notification.Channel)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid channel type: %v", err)})
-			return
-		}
-
-		// Validate using the provider
-		if err := provider.Validate(notification); err != nil {
+		if err := s.validator.Validate(&notification); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid notification: %v", err)})
 			return
 		}
