@@ -2,7 +2,7 @@
 
 ## Description
 
-This is a personal project implementing a notification system having the following requirements
+This is a project implementing a notification system having the following requirements
 
 - The system needs to be able to send notifications via several different channels (email,
   sms, slack) and be easily extensible to support more channels in the future.
@@ -12,7 +12,7 @@ This is a personal project implementing a notification system having the followi
 
 ## Architecture
 
-TODO: Add an image
+![Notification System](./notification-system.png)
 
 ## Usage
 
