@@ -1,8 +1,6 @@
 # Notification System
 
-## Description
-
-This is a project implementing a notification system having the following requirements
+This project implements a notification system having the following requirements:
 
 - The system needs to be able to send notifications via several different channels (email,
   sms, slack) and be easily extensible to support more channels in the future.
@@ -10,9 +8,16 @@ This is a project implementing a notification system having the following requir
 - The system must guarantee an "at least once" SLA for sending the message.
 - The interface for accepting notifications to be sent is an HTTP API.
 
-## Architecture
+## System Architecture
 
 ![Notification System](./notification-system.png)
+
+### Main Components
+
+- _API server_ handles the notification requests, validates them and sends the corresponding messages to the RabbitMQ
+- _Worker_ reads messages from the queues and processes them according the requested message provider
+- _Status Database_ - both API Server and Worker save notification's current status and the number of attempts tried to send the message
+- _Rabbit MQ_ receives the messages from the API Server and sends unacknowledged messages to the corresponding DLQ (dead letter queue)
 
 ## Usage
 
@@ -55,16 +60,19 @@ curl --location '<api-url>/notifications' \
 - `GET /notification/:id/status` for getting notification status
 
 ```
-curl --location 'http://localhost:8080/notifications/f1bd507b-b65a-423d-ba93-d17bbc37a323/status'
+curl --location '<api-url>/notifications/<notification-id>/status'
 ```
+
+[This is a Postman collection](https://universal-trinity-803630.postman.co/workspace/At-Kairos~646c5e69-d3c8-456b-8701-b01d8d5711c7/collection/1202446-3827b24f-5aa9-4e05-b38d-82c97b3044f3?action=share&creator=1202446) to which you can also refer.
 
 ## Prerequisites
 
 - Go 1.24.1
 - Docker
-- Docker Compose
 
-## How to configure .env
+## Configuration
+
+### .env
 
 Create a `.env` file in the root directory based on `.env.example` and make sure to fill in the proper values there.
 
@@ -75,7 +83,7 @@ To configure RabbitMQ you need a running instance of RabbitMQ to fill in the nee
 ### SMS
 
 The system uses [Twilio](https://www.twilio.com/en-us) for sending sms messages.
-Follow the steps provided by Twilio to create an account and active number.
+Follow the steps provided by Twilio to create an account and an active number.
 For test accounts you need to add the numbers that will receive the notifications as verified caller IDs.
 
 ### Slack
@@ -84,7 +92,7 @@ For Slack notifications, the system uses a Slack app with registered Slack bot t
 
 ### Email (SendGrid)
 
-The system uses [Twilio SendGrid](https://sendgrid.com/). You need to provide Twilio Sendgrid API key in .env for the notifications to work properly.
+The system uses [Twilio SendGrid](https://sendgrid.com/) to send emails. You need to provide Twilio Sendgrid API key in .env for the notifications to work properly.
 
 ### Database (PostgreSQL)
 
@@ -96,7 +104,7 @@ The database is used to save the current status of each message. It can be check
 
    ```bash
    cp .env.example .env
-   # Edit .env with your configuration
+   # Edit .env with your configuration as described in the previous section
    ```
 
 1. Start the required services:
