@@ -99,6 +99,8 @@ The system uses [Twilio SendGrid](https://sendgrid.com/) to send emails. You nee
 
 The database is used to save the current status of each message. It can be checked anytime using the `GET /notifications/:id/status` endpoint.
 
+You can use [DBeaver](https://dbeaver.io/) or similar tool to review database.
+
 ## How to run locally?
 
 1. Set up your environment:
