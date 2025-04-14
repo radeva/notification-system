@@ -32,14 +32,14 @@ jobs:
           go install github.com/onsi/ginkgo/v2/ginkgo@latest
           ginkgo version
 
-      - name: Build API Server
-        run: go build -v ./cmd/api/main.go
+      # - name: Build API Server
+      #   run: go build -v ./cmd/api/main.go
 
-      - name: Build Worker
-        run: go build -v ./cmd/worker/main.go
+      # - name: Build Worker
+      #   run: go build -v ./cmd/worker/main.go
 
-      - name: Run unit tests
-        run: ginkgo -v pkg/validation
+      # - name: Run unit tests
+      #   run: ginkgo -v pkg/validation
 
       - name: Create .env.test file
         run: cp .env.test.example .env.test

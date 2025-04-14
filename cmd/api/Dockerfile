@@ -1,14 +1,12 @@
 FROM golang:1.24-alpine
 
-# Copy go mod and sum files
-COPY go.mod ./
+# Copy the source code
+COPY . .
+
 RUN go mod tidy
 
 # Download all dependencies
 RUN go mod download
-
-# Copy the source code
-COPY . .
 
 # Build the application
 RUN go build -o api cmd/api/main.go
