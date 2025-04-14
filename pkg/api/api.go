@@ -79,5 +79,5 @@ func (s *Server) Start() {
 		c.JSON(http.StatusOK, notification)
 	})
 
-	r.Run()
+	r.Run(fmt.Sprintf("%s:%s", s.cfg.Server.Host, s.cfg.Server.Port))
 }
