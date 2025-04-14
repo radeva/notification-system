@@ -3,6 +3,8 @@ FROM golang:1.24-alpine
 # Copy the source code
 COPY . .
 
+RUN pwd && ls -la   
+
 RUN go mod tidy
 
 # Download all dependencies
