@@ -69,6 +69,7 @@ curl --location '<api-url>/notifications/<notification-id>/status'
 
 - Go 1.24.1
 - Docker
+- Ginkgo ( `go install github.com/onsi/ginkgo/v2/ginkgo`)
 
 ## Configuration
 
@@ -125,6 +126,12 @@ The database is used to save the current status of each message. It can be check
    ```
 
 The API will be available at `http://localhost:8080`
+
+## Run tests
+
+```bash
+ginkgo -v pkg/validation
+```
 
 ## How to run in production?
 
