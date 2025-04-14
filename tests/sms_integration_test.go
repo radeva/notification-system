@@ -22,21 +22,19 @@ var _ = ginkgo.Describe("SMS Integration Test", func() {
 	)
 
 	ginkgo.BeforeEach(func() {
-		// Load test configuration
-		cfg, err := config.LoadConfigFromFile("../.env")
+		cfg, err := config.LoadConfig("../.env.test")
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-		// Initialize database
 		db, err = storage.NewDatabase(cfg.Database)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
+		
 		// Set up test notification
 		notification = model.Notification{
 			Channel:   model.ChannelSMS,
 			Recipient: "+359896632259",
 			Message:   "Test SMS message",
 		}
-
+		
 		// Set API URL
 		apiURL = fmt.Sprintf("http://localhost:%s", cfg.Server.Port)
 	})

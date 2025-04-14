@@ -1,13 +1,13 @@
-version: '3.7'
+version: '3.8'
 
 services:
   postgres:
     image: postgres:latest
     container_name: postgres-test
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: notifications_test
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - '5432:5432' # Different port to avoid conflicts with dev environment
     volumes:
@@ -15,17 +15,29 @@ services:
       - postgres_test_data:/var/lib/postgresql/data
     networks:
       - app-test-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
   rabbitmq:
-    image: rabbitmq:management
+    image: rabbitmq:3-management
     container_name: rabbitmq-test
     ports:
       - '5672:5672' # AMQP protocol port (different from dev)
       - '15672:15672' # Web management console (different from dev)
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
     networks:
       - app-test-network
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'check_port_connectivity']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   api:
     build:
@@ -49,11 +61,14 @@ services:
       - SERVER_PORT=${SERVER_PORT}
       - PORT=${SERVER_PORT}
       - SERVER_HOST=${SERVER_HOST}
+      - GO_ENV=test
     ports:
       - '8081:8081'
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - app-test-network
 
@@ -78,8 +93,10 @@ services:
       - RABBITMQ_DLQ_PREFIX=${RABBITMQ_DLQ_PREFIX}
       - USE_MOCK_PROVIDERS=${USE_MOCK_PROVIDERS}
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - app-test-network
 

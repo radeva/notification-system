@@ -22,14 +22,12 @@ var _ = ginkgo.Describe("Slack Integration Test", func() {
 	)
 
 	ginkgo.BeforeEach(func() {
-		// Load test configuration
-		cfg, err := config.LoadConfigFromFile("../.env.test")
+		cfg, err := config.LoadConfig("../.env.test")
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-		// Initialize database
 		db, err = storage.NewDatabase(cfg.Database)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
+		
 		// Set up test notification
 		notification = model.Notification{
 			Channel:   model.ChannelSlack,

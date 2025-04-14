@@ -73,28 +73,25 @@ type Config struct {
 	UseMockProviders bool
 }
 
-func LoadConfigFromFile(filename string) (*Config, error) {
-	err := godotenv.Load(filename)
-	if err != nil {
-		log.Fatal("Error loading .env file")
-		return nil, err
+func LoadConfig(filename string) (*Config, error) {
+	if filename == "" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file")
+			return nil, err
+		}
+	} else {
+		err := godotenv.Load(filename)
+		if err != nil {
+			log.Fatalf("Error loading %s file", filename, err)
+			return nil, err
+		}
 	}
 
-	return InitConfigValue(), nil
+	return InitConfigValues(), nil
 }
 
-
-func LoadConfig() (*Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-		return nil, err
-	}
-
-	return InitConfigValue(), nil
-}
-
-func InitConfigValue()  *Config  {
+func InitConfigValues()  *Config  {
 	maxRetries, _ := strconv.Atoi(os.Getenv("MAX_RETRY_ATTEMPTS"))
 	initialDelayMs, _ := strconv.Atoi(os.Getenv("INITIAL_RETRY_DELAY_MS"))
 	maxDelayMs, _ := strconv.Atoi(os.Getenv("MAX_RETRY_DELAY_MS"))
