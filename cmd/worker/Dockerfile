@@ -2,8 +2,8 @@ FROM golang:1.24-alpine
 
 WORKDIR /app
 
-# Copy go mod and sum files
-COPY go.mod go.sum ./
+COPY go.mod ./
+RUN go mod tidy
 
 # Download all dependencies
 RUN go mod download
