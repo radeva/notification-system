@@ -21,9 +21,7 @@ jobs:
           go-version: '1.23'
 
       - name: Install dependencies
-        run: |
-          go get .
-          go mod tidy
+        run: go mod download
 
       - name: Build API Server
         run: go build -v ./cmd/api/main.go
