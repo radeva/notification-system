@@ -5,9 +5,9 @@ name: Go
 
 on:
   push:
-    branches: ['main']
+    branches: [main]
   pull_request:
-    branches: ['main']
+    branches: [main]
 
 jobs:
   build:
@@ -34,5 +34,5 @@ jobs:
       - name: Build Worker
         run: go build -v ./cmd/worker/main.go
 
-      - name: Run tests
+      - name: Run unit tests
         run: ginkgo -v pkg/validation
