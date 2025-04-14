@@ -3,18 +3,14 @@ FROM golang:1.24-alpine
 # Copy the source code
 COPY . .
 
-RUN pwd && ls -la   
-
 RUN go mod tidy
 
 # Download all dependencies
 RUN go mod download
 
-# Build the application
-RUN go build -o api cmd/api/main.go
 
-# Expose port 8081
-EXPOSE 8081
+# Build the application
+RUN go build -o worker cmd/worker/main.go
 
 # Command to run the executable
-CMD ["./api"] 
+CMD ["./worker"] 

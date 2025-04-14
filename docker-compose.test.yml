@@ -41,7 +41,7 @@ services:
 
   api:
     build:
-      context: .
+      context: ./
       dockerfile: Dockerfile.api
     container_name: api-test
     environment:
@@ -74,7 +74,7 @@ services:
 
   worker:
     build:
-      context: .
+      context: ./
       dockerfile: Dockerfile.worker
     container_name: worker-test
     environment:
