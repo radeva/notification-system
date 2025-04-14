@@ -1,0 +1,91 @@
+version: '3.7'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres-test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: notifications_test
+    ports:
+      - '5432:5432' # Different port to avoid conflicts with dev environment
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_test_data:/var/lib/postgresql/data
+    networks:
+      - app-test-network
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq-test
+    ports:
+      - '5672:5672' # AMQP protocol port (different from dev)
+      - '15672:15672' # Web management console (different from dev)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - app-test-network
+
+  api:
+    build:
+      context: ./cmd/api
+      dockerfile: Dockerfile
+    container_name: api-test
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASS=${RABBITMQ_PASS}
+      - RABBITMQ_SMS_QUEUE=${RABBITMQ_SMS_QUEUE}
+      - RABBITMQ_EMAIL_QUEUE=${RABBITMQ_EMAIL_QUEUE}
+      - RABBITMQ_SLACK_QUEUE=${RABBITMQ_SLACK_QUEUE}
+      - RABBITMQ_DLQ_PREFIX=${RABBITMQ_DLQ_PREFIX}
+      - SERVER_PORT=${SERVER_PORT}
+      - PORT=${SERVER_PORT}
+      - SERVER_HOST=${SERVER_HOST}
+    ports:
+      - '8081:8081'
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - app-test-network
+
+  worker:
+    build:
+      context: ./cmd/worker
+      dockerfile: Dockerfile
+    container_name: worker-test
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASS=${RABBITMQ_PASS}
+      - RABBITMQ_SMS_QUEUE=${RABBITMQ_SMS_QUEUE}
+      - RABBITMQ_EMAIL_QUEUE=${RABBITMQ_EMAIL_QUEUE}
+      - RABBITMQ_SLACK_QUEUE=${RABBITMQ_SLACK_QUEUE}
+      - RABBITMQ_DLQ_PREFIX=${RABBITMQ_DLQ_PREFIX}
+      - USE_MOCK_PROVIDERS=${USE_MOCK_PROVIDERS}
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - app-test-network
+
+networks:
+  app-test-network:
+    driver: bridge
+
+volumes:
+  postgres_test_data:
