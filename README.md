@@ -110,6 +110,12 @@ You can use [DBeaver](https://dbeaver.io/) or similar tool to review database.
    # Edit .env with your configuration as described in the previous section
    ```
 
+1. Destroy tests containers (if any)
+
+   ```bash
+   docker-compose --env-file .env.test -f docker-compose.yml -f docker-compose.test.yml down
+   ```
+
 1. Start the required services:
 
    ```bash
@@ -129,11 +135,21 @@ You can use [DBeaver](https://dbeaver.io/) or similar tool to review database.
 
 The API will be available at `http://localhost:8080`
 
-## Run tests
+## Run unit tests
 
 ```bash
 ginkgo -v pkg/validation
 ```
+
+## Run integration tests
+
+Integration tests use real instances of RabbitMQ and PostgreSQL and mocked notification providers for sms, slack and email.
+
+To run the integration services:
+
+- run `docker compose down`
+- run `docker-compose --env-file .env.test -f docker-compose.yml -f docker-compose.test.yml up -d`
+- run `DB_HOST=localhost RABBITMQ_HOST=localhost go test -v ./tests`
 
 ## How to run in production?
 
