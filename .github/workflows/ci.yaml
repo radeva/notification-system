@@ -23,6 +23,11 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Install ginkgo
+        run: |
+          go install github.com/onsi/ginkgo/v2/ginkgo@latest
+          ginkgo version
+
       - name: Build API Server
         run: go build -v ./cmd/api/main.go
 
