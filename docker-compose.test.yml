@@ -41,8 +41,8 @@ services:
 
   api:
     build:
-      context: ./cmd/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.api
     container_name: api-test
     environment:
       - DB_HOST=${DB_HOST}
@@ -74,8 +74,8 @@ services:
 
   worker:
     build:
-      context: ./cmd/worker
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.worker
     container_name: worker-test
     environment:
       - DB_HOST=${DB_HOST}
