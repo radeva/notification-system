@@ -41,6 +41,9 @@ jobs:
       - name: Run unit tests
         run: ginkgo -v pkg/validation
 
+      - name: Create .env.test file
+        run: cp .env.test.example .env.test
+
       - name: Set up Docker Compose
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.35.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
