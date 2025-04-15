@@ -145,11 +145,12 @@ ginkgo -v pkg/validation
 
 Integration tests use real instances of RabbitMQ and PostgreSQL and mocked notification providers for sms, slack and email.
 
-To run the integration services:
+To run the integration tests, execute the following commands :
 
-- run `docker compose down`
-- run `docker-compose --env-file .env.test -f docker-compose.yml -f docker-compose.test.yml up -d`
-- run `DB_HOST=localhost RABBITMQ_HOST=localhost go test -v ./tests`
+- `docker compose down`
+- `cp .env.test.example .env.test`
+- `docker-compose --env-file .env.test -f docker-compose.yml -f docker-compose.test.yml up -d`
+- `DB_HOST=localhost RABBITMQ_HOST=localhost go test -v ./tests`
 
 ## How to run in production?
 
