@@ -134,6 +134,7 @@ You can use [DBeaver](https://dbeaver.io/) or similar tool to review database.
    ```
 
 The API will be available at `http://localhost:8080`
+RabbitMQ Web UI will be available at `http://localhost:15672/`
 
 ## Run unit tests
 
